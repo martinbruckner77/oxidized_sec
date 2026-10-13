@@ -1,0 +1,16 @@
+services:
+  oxidized:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: oxidized-secure:local
+    restart: unless-stopped
+    environment:
+      OXIDIZED_CREDENTIAL_KEY_FILE: /run/oxidized-secrets/key.bin
+      OXIDIZED_HOME: /home/oxidized/.config/oxidized
+    volumes:
+      - ./deploy/data/config:/home/oxidized/.config/oxidized
+      - ./deploy/data/secrets:/run/oxidized-secrets:ro
+    security_opt:
+      - no-new-privileges:true
+    # No ports published by default. Enable web access only behind authenticated reverse proxy.
