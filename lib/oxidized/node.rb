@@ -1,6 +1,7 @@
 module Oxidized
   require 'resolv'
   require_relative 'node/stats'
+  require_relative 'secure_credentials'
   class MethodNotFound < OxidizedError; end
   class ModelNotFound  < OxidizedError; end
 
@@ -167,7 +168,10 @@ module Oxidized
       # Resolve configured username/password
       {
         username: resolve_key(:username, opt),
-        password: resolve_key(:password, opt)
+        password: begin
+          secret = resolve_key(:password, opt)
+          secret.nil? ? nil : Oxidized::SecureCredentials.decrypt!(secret)
+        end
       }
     end
 
@@ -225,40 +229,40 @@ module Oxidized
       key_sym = key.to_sym
       key_str = key.to_s
       model_name = @model.class.name.to_s.downcase
-      logger.debug "resolving node key '#{key}', with passed global value of '#{global}' " \
-                   "and node value '#{opt[key_sym]}'"
+      # Never print credential values, even in debug logs.
+      logger.debug "resolving node key '#{key}'"
 
       # Node
       if opt[key_sym]
         value = opt[key_sym]
-        logger.debug "setting node key '#{key}' to value '#{value}' from node"
+        logger.debug "setting node key '#{key}' from node"
 
       # Group specific model
       elsif Oxidized.config.groups.has_key?(@group) &&
             Oxidized.config.groups[@group].models.has_key?(model_name) &&
             Oxidized.config.groups[@group].models[model_name].has_key?(key_str)
         value = Oxidized.config.groups[@group].models[model_name][key_str]
-        logger.debug "setting node key '#{key}' to value '#{value}' from model in group"
+        logger.debug "setting node key '#{key}' from model in group"
 
       # Group
       elsif Oxidized.config.groups.has_key?(@group) && Oxidized.config.groups[@group].has_key?(key_str)
         value = Oxidized.config.groups[@group][key_str]
-        logger.debug "setting node key '#{key}' to value '#{value}' from group"
+        logger.debug "setting node key '#{key}' from group"
 
       # Model
       elsif Oxidized.config.models.has_key?(model_name) && Oxidized.config.models[model_name].has_key?(key_str)
         value = Oxidized.config.models[model_name][key_str]
-        logger.debug "setting node key '#{key}' to value '#{value}' from model"
+        logger.debug "setting node key '#{key}' from model"
 
       # Global passed
       elsif global
         value = global
-        logger.debug "setting node key '#{key}' to value '#{value}' from passed global value"
+        logger.debug "setting node key '#{key}' from passed global value"
 
       # Global
       elsif Oxidized.config.has_key?(key_str)
         value = Oxidized.config[key_str]
-        logger.debug "setting node key '#{key}' to value '#{value}' from global"
+        logger.debug "setting node key '#{key}' from global"
       end
       value
     end
