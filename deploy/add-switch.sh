@@ -17,7 +17,7 @@ if awk -F';' -v h="$HOST" '$1==h {found=1} END {exit !found}' "$DB"; then
   exit 1
 fi
 echo "Passwort wird verdeckt abgefragt und direkt im Container verschlüsselt."
-TOKEN="$(docker compose -f docker-compose.secure.yml run --rm --no-deps -T --entrypoint /usr/local/bin/oxidized-credential oxidized encrypt </dev/tty)" || exit 1
+read -r -s -p "Switch-Passwort: " PASSWORD </dev/tty\necho >&2\nTOKEN="$(printf '%s\\n' "$PASSWORD" | docker compose -f docker-compose.secure.yml run --rm --no-deps -T --entrypoint /usr/local/bin/oxidized-credential oxidized encrypt)" || exit 1\nunset PASSWORD
 [[ "$TOKEN" == enc:v1:* ]] || { echo "Verschlüsselung fehlgeschlagen." >&2; exit 1; }
 printf '%s;%s;%s;%s\n' "$HOST" "$MODEL" "$USERNAME" "$TOKEN" >> "$DB"
 chown 30000:30000 "$DB"; chmod 0600 "$DB"
